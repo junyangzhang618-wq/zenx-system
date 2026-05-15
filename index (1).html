@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>众翔面试系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        :root {
+            --ink: #1a1a2e;
+            --ink-soft: #4a4a6a;
+            --ink-muted: #8888aa;
+            --surface: #ffffff;
+            --surface-alt: #f5f5fb;
+            --surface-card: #ffffff;
+            --accent: #5548d9;
+            --accent-light: #7b6ff0;
+            --accent-glow: rgba(85,72,217,0.15);
+            --rose: #e85d7a;
+            --teal: #27b6b6;
+            --success: #22c47a;
+            --warn: #f59e0b;
+            --border: #e2e2f0;
+            --border-focus: #5548d9;
+            --radius-sm: 10px;
+            --radius: 16px;
+            --radius-lg: 24px;
+            --shadow-sm: 0 2px 8px rgba(85,72,217,0.08);
+            --shadow: 0 4px 20px rgba(85,72,217,0.12);
+            --shadow-lg: 0 8px 40px rgba(85,72,217,0.18);
+            --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            --font-body: 'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--surface-alt);
+            color: var(--ink);
+            min-height: 100vh;
+            font-size: 15px;
+            line-height: 1.6;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* ─── STICKY TOP BAR ─── */
+        .top-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .top-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .top-bar-logo {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 14px;
+            flex-shrink: 0;
+        }
+        .top-bar-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+        .admin-entry {
+            font-size: 12px; color: var(--accent); font-weight: 600;
+            cursor: pointer; padding: 6px 12px;
+            border: 1px solid var(--accent);
+            border-radius: 20px; background: var(--accent-glow);
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .admin-entry:hover { background: var(--accent); color: white; }
+
+        /* ─── STEP PROGRESS ─── */
+        .step-progress {
+            background: white;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .step-progress-track {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            position: relative;
+        }
+        .sp-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        .sp-item::before {
+            content: '';
+            position: absolute;
+            top: 14px; left: -50%; right: 50%;
+            height: 2px;
+            background: var(--border);
+            z-index: -1;
+            transition: background 0.3s;
+        }
+        .sp-item:first-child::before { display: none; }
+        .sp-item.done::before { background: var(--success); }
+        .sp-item.active::before { background: var(--accent); }
+
+        .sp-dot {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--surface-alt);
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: var(--ink-muted);
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+        .sp-item.active .sp-dot {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+        .sp-item.done .sp-dot {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        .sp-label {
+            font-size: 10px;
+            color: var(--ink-muted);
+            text-align: center;
+            line-height: 1.2;
+            max-width: 48px;
+        }
+        .sp-item.active .sp-label { color: var(--accent); font-weight: 600; }
+        .sp-item.done .sp-label { color: var(--success); }
+
+        /* ─── MAIN CONTENT ─── */
+        .main { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+        /* ─── SECTION HEADER ─── */
+        .section-header {
+            margin-bottom: 20px;
+        }
+        .section-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+            color: var(--accent); text-transform: uppercase;
+            background: var(--accent-glow);
+            padding: 4px 10px; border-radius: 20px;
+            margin-bottom: 8px;
+        }
+        .section-title {
+            font-size: 22px; font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -0.02em;
+        }
+        .section-desc { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
+
+        /* ─── CARD ─── */
+        .card {
+            background: var(--surface-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700;
+            color: var(--accent);
+            display: flex; align-items: center; gap: 7px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-title i { font-size: 14px; }
+
+        /* ─── FORM FIELDS ─── */
+        .field { margin-bottom: 14px; }
+        .field:last-child { margin-bottom: 0; }
+
+        .field-label {
+            display: block;
+            font-size: 12px; font-weight: 700;
+            color: var(--ink-soft);
+            margin-bottom: 6px;
+            letter-spacing: 0.01em;
+        }
+        .field-label.required::after {
+            content: " *";
+            color: var(--rose);
+        }
+        .field-label .opt {
+            font-weight: 400;
+            color: var(--ink-muted);
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-family: var(--font-body);
+            color: var(--ink);
+            background: white;
+            transition: var(--transition);
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .field-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .field-input::placeholder { color: var(--ink-muted); }
+        textarea.field-input { resize: vertical; min-height: 90px; line-height: 1.5; }
+        select.field-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .field-row { display: flex; gap: 10px; }
+        .field-row .field { flex: 1; min-width: 0; }
+
+        /* birthdate */
+        .birth-row { display: flex; gap: 8px; align-items: center; }
+        .birth-row input { flex: 1; text-align: center; }
+        .birth-sep { color: var(--ink-muted); font-weight: 700; font-size: 16px; flex-shrink: 0; }
+
+        /* ─── EXPERIENCE CARD (mobile-first stacked) ─── */
+        .exp-entry {
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .exp-entry-num {
+            font-size: 10px; font-weight: 700;
+            color: var(--ink-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .exp-num-badge {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* ─── SKILLS GRID ─── */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .skill-item { }
+        .skill-name {
+            font-size: 11px; font-weight: 700;
+            color: var(--ink-soft);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ─── PERSONALITY TEST ─── */
+        .test-intro {
+            text-align: center;
+            padding: 20px 0 10px;
+        }
+        .test-intro-icon {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: var(--shadow);
+        }
+        .test-intro-icon i { font-size: 32px; color: white; }
+        .test-intro h2 { font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 10px; }
+        .test-intro p { font-size: 14px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 10px; }
+        .declaration-box {
+            background: var(--accent-glow);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            text-align: left;
+            border: 1px solid rgba(85,72,217,0.2);
+            margin: 16px 0;
+        }
+        .declaration-box h4 {
+            color: var(--accent); font-size: 13px; font-weight: 700;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .declaration-box p { font-size: 12px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 4px; }
+        .declaration-box p:last-child { margin-bottom: 0; }
+
+        /* progress bar */
+        .test-progress {
+            margin-bottom: 18px;
+        }
+        .test-progress-meta {
+            display: flex; justify-content: space-between;
+            font-size: 12px; font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .progress-bar {
+            height: 6px;
+            background: var(--surface-alt);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--accent), var(--accent-light));
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* question */
+        .question-label {
+            font-size: 11px; font-weight: 700;
+            color: var(--accent); text-transform: uppercase;
+            letter-spacing: 0.06em; margin-bottom: 6px;
+        }
+        .question-text {
+            font-size: 18px; font-weight: 700;
+            color: var(--ink);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .options-list { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: white;
+            cursor: pointer;
+            transition: var(--transition);
+            -webkit-tap-highlight-color: transparent;
+            gap: 12px;
+        }
+        .option-btn:active { transform: scale(0.98); }
+        .option-btn.selected {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+        .option-text { font-size: 15px; color: var(--ink); flex: 1; text-align: left; }
+        .option-score {
+            font-size: 13px; font-weight: 700;
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 2px 8px; border-radius: 20px;
+            white-space: nowrap;
+        }
+        .option-btn.selected .option-score {
+            background: var(--accent);
+            color: white;
+        }
+        .option-check {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+        .option-btn.selected .option-check {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .option-check::after {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: white;
+            opacity: 0;
+        }
+        .option-btn.selected .option-check::after { opacity: 1; }
+
+        .auto-next-tip {
+            margin-top: 12px;
+            font-size: 12px; color: var(--ink-muted);
+            text-align: center;
+            padding: 8px 12px;
+            background: var(--surface-alt);
+            border-radius: 8px;
+        }
+        .auto-next-tip i { color: var(--accent); margin-right: 4px; }
+
+        /* ─── NAVIGATION ─── */
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-bottom: 8px;
+        }
+        .nav-actions.center { justify-content: center; }
+
+        .btn {
+            display: flex;
+            align-items: center; justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            border-radius: 50px;
+            font-size: 15px; font-weight: 700;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+            flex: 1;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: white;
+            box-shadow: 0 4px 16px rgba(85,72,217,0.35);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 24px rgba(85,72,217,0.45); }
+        .btn-ghost {
+            background: white;
+            color: var(--accent);
+            border: 1.5px solid var(--border);
+        }
+        .btn-ghost:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .btn-rose {
+            background: linear-gradient(135deg, var(--rose), #f0809a);
+            color: white;
+            box-shadow: 0 4px 16px rgba(232,93,122,0.3);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #34d98a);
+            color: white;
+            box-shadow: 0 4px 16px rgba(34,196,122,0.3);
+        }
+        .btn[disabled] {
+            opacity: 0.4;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .btn-solo { max-width: 280px; }
+        .btn-icon-only {
+            flex: none;
+            width: 48px; height: 48px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        /* ─── COMPLETION ─── */
+        .completion-hero {
+            text-align: center;
+            padding: 24px 0 16px;
+        }
+        .completion-check {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, var(--success), #34d98a);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 30px rgba(34,196,122,0.35);
+            animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .completion-check i { font-size: 36px; color: white; }
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .completion-hero h2 { font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+        .completion-hero p { font-size: 14px; color: var(--ink-soft); }
+
+        .summary-list { display: flex; flex-direction: column; gap: 8px; }
+        .summary-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+        }
+        .summary-item i { color: var(--success); font-size: 14px; flex-shrink: 0; }
+        .summary-item span { font-size: 13px; color: var(--ink-soft); }
+
+        /* ─── ADMIN PANEL ─── */
+        .admin-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .admin-overlay.open { display: flex; animation: slideUp 0.3s ease; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .admin-sheet {
+            background: white;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .admin-sheet-handle {
+            width: 36px; height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .admin-sheet-title {
+            font-size: 18px; font-weight: 800;
+            color: var(--ink);
+            margin-bottom: 16px;
+        }
+        .admin-login { text-align: center; padding: 20px 0; }
+        .admin-login p { font-size: 14px; color: var(--ink-soft); margin-bottom: 14px; }
+        .admin-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .admin-action {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px; font-weight: 600; color: var(--ink);
+        }
+        .admin-action i {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .admin-action:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+        /* scrollable table for admin data */
+        .admin-table-wrap { overflow-x: auto; margin-top: 12px; }
+        table.admin-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 12px; min-width: 600px;
+        }
+        .admin-table th {
+            background: var(--accent-glow);
+            color: var(--accent); font-weight: 700;
+            padding: 8px 10px; text-align: left;
+            border-bottom: 2px solid var(--accent);
+            white-space: nowrap;
+        }
+        .admin-table td {
+            padding: 8px 10px; border-bottom: 1px solid var(--border);
+            color: var(--ink-soft);
+            white-space: nowrap;
+        }
+        .admin-table tr:hover td { background: var(--surface-alt); }
+
+        /* ─── LOADING ─── */
+        .loading-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(26,26,46,0.8);
+            z-index: 300;
+            align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px;
+        }
+        .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: white; font-size: 14px; font-weight: 600; }
+
+        /* ─── SECTION TRANSITIONS ─── */
+        .section { display: none; animation: fadeUp 0.35s ease; }
+        .section.active { display: block; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── INFO NOTICE ─── */
+        .info-notice {
+            display: flex; gap: 10px;
+            padding: 10px 14px;
+            background: rgba(85,72,217,0.06);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent);
+            margin-bottom: 14px;
+        }
+        .info-notice i { color: var(--accent); flex-shrink: 0; margin-top: 2px; font-size: 13px; }
+        .info-notice p { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+
+        /* PDF hidden report */
+        #pdfReport {
+            position: absolute; left: -9999px; top: -9999px;
+            width: 210mm; background: white; color: black;
+            font-family: 'Microsoft YaHei','SimHei',sans-serif;
+            font-size: 11px; padding: 10mm;
+        }
+        .pdf-h { text-align: center; border-bottom: 2px solid #5548d9; padding-bottom: 10px; margin-bottom: 12px; }
+        .pdf-h h1 { color: #5548d9; font-size: 18px; margin-bottom: 4px; }
+        .pdf-h p { color: #666; font-size: 10px; }
+        .pdf-s { margin-bottom: 12px; }
+        .pdf-s h2 { color: #5548d9; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 3px; margin-bottom: 6px; }
+        .pdf-t { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8px; }
+        .pdf-t th,.pdf-t td { border: 1px solid #ddd; padding: 4px 6px; }
+        .pdf-t th { background: #f0f0ff; font-weight: bold; }
+        .pdf-foot { border-top: 1px solid #eee; padding-top: 8px; text-align: center; font-size: 9px; color: #999; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+    <div class="top-bar-brand">
+        <div class="top-bar-logo"><i class="fas fa-clipboard-check"></i></div>
+        <div class="top-bar-title">众翔面试系统</div>
+    </div>
+    <div class="admin-entry" onclick="openAdmin()"><i class="fas fa-cog"></i> 管理后台</div>
+</div>
+
+<!-- STEP PROGRESS -->
+<div class="step-progress">
+    <div class="step-progress-track">
+        <div class="sp-item active" id="sp1">
+            <div class="sp-dot">1</div>
+            <div class="sp-label">基本信息</div>
+        </div>
+        <div class="sp-item" id="sp2">
+            <div class="sp-dot">2</div>
+            <div class="sp-label">教育经历</div>
+        </div>
+        <div class="sp-item" id="sp3">
+            <div class="sp-dot">3</div>
+            <div class="sp-label">技能评价</div>
+        </div>
+        <div class="sp-item" id="sp4">
+            <div class="sp-dot">4</div>
+            <div class="sp-label">人格测试</div>
+        </div>
+        <div class="sp-item" id="sp5">
+            <div class="sp-dot"><i class="fas fa-check" style="font-size:10px"></i></div>
+            <div class="sp-label">完成</div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- ── SECTION 1: 基本信息 ── -->
+    <div class="section active" id="sec1">
+        <div class="section-header">
+            <div class="section-tag"><i class="fas fa-user"></i> 第一步</div>
+            <div class="section-title">基本信息</div>
+            <div class="section-desc">请填写您的个人基本资料，带 * 为必填项</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-briefcase"></i> 求职信息</div>
+            <div class="field">
+                <label class="field-label required">求职岗位</label>
+                <input type="text" class="field-input" id="jobPosition" placeholder="例：销售经理">
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label class="field-label required">面试时间</label>
+                    <input type="date" class="field-input" id="interviewDate">
+                </div>
+                <div class="field">
+                    <label class="field-label required">可到岗时间</label>
+                    <input type="date" class="field-input" id="availableDate">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-id-card"></i> 个人资料</div>
+            <div class="field-row">
+                <div class="field">
+                    <label class="field-label required">姓名</label>
+                    <input type="text" class="field-input" id="name" placeholder="请输入真实姓名">
+                </div>
+                <div class="field">
+                    <label class="field-label required">性别</label>
+                    <select class="field-input" id="gender">
+                        <option value="">请选择</option>
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label class="field-label required">出生年月日</label>
+                <div class="birth-row">
+                    <input type="text" class="field-input" id="birthYear" placeholder="年" maxlength="4">
+                    <span class="birth-sep">-</span>
+                    <input type="text" class="field-input" id="birthMonth" placeholder="月" maxlength="2">
+                    <span class="birth-sep">-</span>
+                    <input type="text" class="field-input" id="birthDay" placeholder="日" maxlength="2">
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label class="field-label required">婚育状况</label>
+                    <select class="field-input" id="maritalStatus">
+                        <option value="">请选择</option>
+                        <option value="未婚">未婚</option>
+                        <option value="已婚未育">已婚未育</option>
+                        <option value="已婚已育">已婚已育</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label required">户籍地</label>
+                    <input type="text" class="field-input" id="hometown" placeholder="省/市">
+                </div>
+            </div>
+            <div class="field">
+                <label class="field-label required">联系电话</label>
+                <input type="tel" class="field-input" id="phone" placeholder="请输入手机号码">
+            </div>
+            <div class="field">
+                <label class="field-label required">现在住址</label>
+                <input type="text" class="field-input" id="address" placeholder="详细居住地址">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-yen-sign"></i> 薪资期望</div>
+            <div class="field-row">
+                <div class="field">
+                    <label class="field-label required">期望无责底薪</label>
+                    <input type="text" class="field-input" id="baseSalary" placeholder="元/月">
+                </div>
+                <div class="field">
+                    <label class="field-label required">期望综合薪资</label>
+                    <input type="text" class="field-input" id="totalSalary" placeholder="元/月">
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <div style="flex:1"></div>
+            <button class="btn btn-primary" onclick="goNext(2)">
+                下一步 <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── SECTION 2: 教育/工作经历 ── -->
+    <div class="section" id="sec2">
+        <div class="section-header">
+            <div class="section-tag"><i class="fas fa-graduation-cap"></i> 第二步</div>
+            <div class="section-title">教育与工作经历</div>
+            <div class="section-desc">请填写您的教育背景和工作经历</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-university"></i> 教育经历</div>
+
+            <div class="exp-entry">
+                <div class="exp-entry-num"><div class="exp-num-badge">1</div> 第一段教育经历（必填）</div>
+                <div class="field">
+                    <label class="field-label required">起止年月</label>
+                    <input type="text" class="field-input" id="eduDate1" placeholder="例：2018.09 - 2022.06">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label required">学校名称</label>
+                        <input type="text" class="field-input" id="school1" placeholder="就读学校">
+                    </div>
+                    <div class="field">
+                        <label class="field-label required">专业</label>
+                        <input type="text" class="field-input" id="major1" placeholder="所学专业">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label required">是否取得学位</label>
+                    <select class="field-input" id="hasDegree1">
+                        <option value="">请选择</option>
+                        <option value="是">是</option>
+                        <option value="否">否</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="exp-entry">
+                <div class="exp-entry-num"><div class="exp-num-badge" style="background:var(--ink-muted)">2</div> 第二段教育经历（选填）</div>
+                <div class="field">
+                    <label class="field-label">起止年月</label>
+                    <input type="text" class="field-input" id="eduDate2" placeholder="例：2015.09 - 2018.06">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">学校名称</label>
+                        <input type="text" class="field-input" id="school2" placeholder="就读学校">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">专业</label>
+                        <input type="text" class="field-input" id="major2" placeholder="所学专业">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">是否取得学位</label>
+                    <select class="field-input" id="hasDegree2">
+                        <option value="">请选择</option>
+                        <option value="是">是</option>
+                        <option value="否">否</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-chalkboard-teacher"></i> 培训经历 <span style="font-weight:400;color:var(--ink-muted);font-size:11px">（选填）</span></div>
+            <div class="field">
+                <label class="field-label">起止年月</label>
+                <input type="text" class="field-input" id="trainingDate" placeholder="例：2022.03 - 2022.06">
+            </div>
+            <div class="field">
+                <label class="field-label">培训机构</label>
+                <input type="text" class="field-input" id="trainingOrg" placeholder="培训机构名称">
+            </div>
+            <div class="field">
+                <label class="field-label">培训内容</label>
+                <textarea class="field-input" id="trainingContent" placeholder="请简述培训内容..."></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-briefcase"></i> 工作经历</div>
+            <div class="info-notice">
+                <i class="fas fa-info-circle"></i>
+                <p>请按时间由近到远填写，最近一段工作经历优先填写</p>
+            </div>
+
+            <div class="exp-entry" id="workEntry1">
+                <div class="exp-entry-num"><div class="exp-num-badge">1</div> 最近工作（必填）</div>
+                <div class="field">
+                    <label class="field-label required">起止年月</label>
+                    <input type="text" class="field-input" id="workDate1" placeholder="例：2022.07 - 至今">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label required">单位名称</label>
+                        <input type="text" class="field-input" id="company1" placeholder="公司名称">
+                    </div>
+                    <div class="field">
+                        <label class="field-label required">公司人数</label>
+                        <input type="text" class="field-input" id="companySize1" placeholder="例：100人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label required">职位</label>
+                        <input type="text" class="field-input" id="position1" placeholder="担任职位">
+                    </div>
+                    <div class="field">
+                        <label class="field-label required">下属人数</label>
+                        <input type="text" class="field-input" id="subordinates1" placeholder="例：5人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label required">无责底薪</label>
+                        <input type="text" class="field-input" id="baseSalary1" placeholder="元/月">
+                    </div>
+                    <div class="field">
+                        <label class="field-label required">综合薪资</label>
+                        <input type="text" class="field-input" id="totalSalary1" placeholder="元/月">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label required">离职原因</label>
+                    <input type="text" class="field-input" id="leaveReason1" placeholder="离职原因">
+                </div>
+            </div>
+
+            <div class="exp-entry">
+                <div class="exp-entry-num"><div class="exp-num-badge" style="background:var(--ink-muted)">2</div> 第二段工作（选填）</div>
+                <div class="field">
+                    <label class="field-label">起止年月</label>
+                    <input type="text" class="field-input" id="workDate2" placeholder="起止年月">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">单位名称</label>
+                        <input type="text" class="field-input" id="company2" placeholder="公司名称">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">公司人数</label>
+                        <input type="text" class="field-input" id="companySize2" placeholder="例：50人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">职位</label>
+                        <input type="text" class="field-input" id="position2" placeholder="担任职位">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">下属人数</label>
+                        <input type="text" class="field-input" id="subordinates2" placeholder="例：0人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">无责底薪</label>
+                        <input type="text" class="field-input" id="baseSalary2" placeholder="元/月">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">综合薪资</label>
+                        <input type="text" class="field-input" id="totalSalary2" placeholder="元/月">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">离职原因</label>
+                    <input type="text" class="field-input" id="leaveReason2" placeholder="离职原因">
+                </div>
+            </div>
+
+            <div class="exp-entry">
+                <div class="exp-entry-num"><div class="exp-num-badge" style="background:var(--ink-muted)">3</div> 第三段工作（选填）</div>
+                <div class="field">
+                    <label class="field-label">起止年月</label>
+                    <input type="text" class="field-input" id="workDate3" placeholder="起止年月">
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">单位名称</label>
+                        <input type="text" class="field-input" id="company3" placeholder="公司名称">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">公司人数</label>
+                        <input type="text" class="field-input" id="companySize3" placeholder="例：20人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">职位</label>
+                        <input type="text" class="field-input" id="position3" placeholder="担任职位">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">下属人数</label>
+                        <input type="text" class="field-input" id="subordinates3" placeholder="例：0人">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label class="field-label">无责底薪</label>
+                        <input type="text" class="field-input" id="baseSalary3" placeholder="元/月">
+                    </div>
+                    <div class="field">
+                        <label class="field-label">综合薪资</label>
+                        <input type="text" class="field-input" id="totalSalary3" placeholder="元/月">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">离职原因</label>
+                    <input type="text" class="field-input" id="leaveReason3" placeholder="离职原因">
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn btn-ghost" onclick="goPrev(1)">
+                <i class="fas fa-arrow-left"></i> 上一步
+            </button>
+            <button class="btn btn-primary" onclick="goNext(3)">
+                下一步 <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── SECTION 3: 技能/自我评价 ── -->
+    <div class="section" id="sec3">
+        <div class="section-header">
+            <div class="section-tag"><i class="fas fa-tools"></i> 第三步</div>
+            <div class="section-title">技能与自我评价</div>
+            <div class="section-desc">请评估您的软件技能水平并进行自我评价</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-laptop-code"></i> 软件技能熟练度</div>
+            <div class="skills-grid">
+                <div class="skill-item">
+                    <div class="skill-name">Word</div>
+                    <select class="field-input" id="wordSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-name">Excel</div>
+                    <select class="field-input" id="excelSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-name">PPT</div>
+                    <select class="field-input" id="pptSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-name">PS</div>
+                    <select class="field-input" id="psSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-name">Ai / 剪映</div>
+                    <select class="field-input" id="aiSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-name">PR</div>
+                    <select class="field-input" id="prSkill">
+                        <option value="">请选择</option>
+                        <option value="不熟练">不熟练</option>
+                        <option value="一般">一般</option>
+                        <option value="熟练">熟练</option>
+                        <option value="非常熟练">非常熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-user-edit"></i> 自我评价</div>
+            <div class="field">
+                <label class="field-label required">我的优势</label>
+                <textarea class="field-input" id="strengths" placeholder="请描述您的优势、长处..."></textarea>
+            </div>
+            <div class="field">
+                <label class="field-label required">我的劣势</label>
+                <textarea class="field-input" id="weaknesses" placeholder="请客观描述您的不足之处..."></textarea>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn btn-ghost" onclick="goPrev(2)">
+                <i class="fas fa-arrow-left"></i> 上一步
+            </button>
+            <button class="btn btn-primary" onclick="goNext(4)">
+                人格测试 <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── SECTION 4: 大五人格测试 ── -->
+    <div class="section" id="sec4">
+
+        <!-- intro screen -->
+        <div id="testIntro">
+            <div class="test-intro">
+                <div class="test-intro-icon"><i class="fas fa-brain"></i></div>
+                <h2>大五人格测试</h2>
+                <p>大五人格模型是心理学界最受认可的人格特质理论，涵盖五个核心维度：神经质、外倾性、开放性、宜人性和尽责性。</p>
+                <p>本测试共 <strong>60 道题</strong>，选择答案后自动跳转下一题，完成后生成专属评估报告。</p>
+            </div>
+
+            <div class="declaration-box">
+                <h4><i class="fas fa-shield-alt"></i> 测试声明</h4>
+                <p>1. 本测试基于经典大五人格理论，结果仅供参考</p>
+                <p>2. 您的数据将被严格保密，仅用于本次招聘评估</p>
+                <p>3. 请根据真实情况作答，不要刻意选择"好"或"坏"的答案</p>
+                <p>4. 测试结果是综合评估的一部分，不会单独作为录用决策依据</p>
+            </div>
+
+            <div class="nav-actions" style="justify-content:center">
+                <button class="btn btn-primary btn-solo" onclick="startTest()">
+                    <i class="fas fa-play-circle"></i> 开始测试
+                </button>
+            </div>
+            <div class="nav-actions" style="margin-top:4px">
+                <button class="btn btn-ghost" onclick="goPrev(3)" style="flex:none;padding:12px 20px">
+                    <i class="fas fa-arrow-left"></i> 返回上一步
+                </button>
+            </div>
+        </div>
+
+        <!-- test screen -->
+        <div id="testScreen" style="display:none">
+            <div class="test-progress">
+                <div class="test-progress-meta">
+                    <span>大五人格测试进度</span>
+                    <span id="progressText">1 / 60</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="question-label" id="questionLabel">问题 1</div>
+                <div class="question-text" id="questionText">加载中...</div>
+                <div class="options-list" id="optionsList"></div>
+                <div class="auto-next-tip">
+                    <i class="fas fa-info-circle"></i> 选择答案后自动进入下一题
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <button class="btn btn-ghost btn-icon-only" id="prevQBtn" onclick="prevQ()" disabled title="上一题">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="btn btn-primary" id="nextQBtn" onclick="nextQ()">
+                    下一题 <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SECTION 5: 完成 ── -->
+    <div class="section" id="sec5">
+        <div class="completion-hero">
+            <div class="completion-check"><i class="fas fa-check"></i></div>
+            <h2>填写与测试完成！</h2>
+            <p>您的所有信息已成功提交，可下载综合评估报告</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fas fa-file-alt"></i> 报告包含内容</div>
+            <div class="summary-list">
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>个人基本信息与求职信息</span></div>
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>教育背景与培训经历</span></div>
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>工作经历详情</span></div>
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>软件技能熟练度评估</span></div>
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>自我评价（优势与劣势）</span></div>
+                <div class="summary-item"><i class="fas fa-check-circle"></i><span>大五人格测试各维度得分与分析</span></div>
+            </div>
+        </div>
+
+        <div class="nav-actions" style="flex-direction:column;gap:10px">
+            <button class="btn btn-primary" onclick="downloadReport()">
+                <i class="fas fa-download"></i> 下载综合评估报告（PDF）
+            </button>
+            <button class="btn btn-ghost" onclick="restartAll()">
+                <i class="fas fa-redo"></i> 重新开始
+            </button>
+        </div>
+    </div>
+
+</div><!-- /main -->
+
+<!-- ADMIN OVERLAY -->
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminIfOutside(event)">
+    <div class="admin-sheet" id="adminSheet">
+        <div class="admin-sheet-handle"></div>
+        <div class="admin-sheet-title"><i class="fas fa-cog" style="color:var(--accent);margin-right:8px"></i>后台管理面板</div>
+
+        <div id="adminLogin" class="admin-login">
+            <p>管理员登录后可查看与导出所有面试数据</p>
+            <div class="field">
+                <label class="field-label">管理员密码</label>
+                <input type="password" class="field-input" id="adminPwd" placeholder="请输入密码" onkeydown="if(event.key==='Enter')loginAdmin()">
+            </div>
+            <div class="nav-actions" style="margin-top:12px">
+                <button class="btn btn-primary" onclick="loginAdmin()"><i class="fas fa-sign-in-alt"></i> 登录</button>
+                <button class="btn btn-ghost" onclick="closeAdmin()">取消</button>
+            </div>
+        </div>
+
+        <div id="adminContent" style="display:none">
+            <div class="admin-btns">
+                <div class="admin-action" onclick="showAdminData()">
+                    <i class="fas fa-table"></i> 查看所有数据
+                </div>
+                <div class="admin-action" onclick="downloadCSV()">
+                    <i class="fas fa-file-csv"></i> 下载 CSV 表格
+                </div>
+                <div class="admin-action" onclick="exportAllData()">
+                    <i class="fas fa-database"></i> 导出 JSON 数据
+                </div>
+                <div class="admin-action" onclick="downloadAllAsPDF()">
+                    <i class="fas fa-file-pdf"></i> 下载完整 PDF 报告
+                </div>
+                <div class="admin-action" onclick="clearAllData()" style="color:var(--rose)">
+                    <i class="fas fa-trash" style="background:var(--rose)"></i> 清空所有数据
+                </div>
+                <div class="admin-action" onclick="logoutAdmin()">
+                    <i class="fas fa-sign-out-alt" style="background:var(--ink-soft)"></i> 退出登录
+                </div>
+            </div>
+            <div id="adminDataWrap" style="display:none;margin-top:16px">
+                <div class="admin-table-wrap" id="adminTableContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">正在生成评估报告，请稍候...</div>
+</div>
+
+<!-- HIDDEN PDF -->
+<div id="pdfReport"></div>
+
+<script>
+// ───────── DATA ─────────
+const questions = [
+    {id:1,text:"我是一个充满烦恼的人",dim:"N"},{id:2,text:"我真心喜欢我遇到的大部分人",dim:"E"},{id:3,text:"我喜欢浪费时间做白日梦",dim:"O"},{id:4,text:"我不会怀疑或嘲讽别人的企图",dim:"A"},{id:5,text:"在工作中，我的效率比较高且能胜任岗位工作",dim:"C"},
+    {id:6,text:"我经常因为一些事而感到焦虑和恐惧",dim:"N"},{id:7,text:"我很喜欢和他人交谈",dim:"E"},{id:8,text:"大自然和艺术的规律形态让我感觉极为奇妙",dim:"O"},{id:9,text:"我不相信如果你允许别人占你便宜，很多人真的会占你便宜",dim:"A"},{id:10,text:"我会保持我的物品整洁",dim:"C"},
+    {id:11,text:"我经常感到紧张和心神不定",dim:"N"},{id:12,text:"我喜欢很多人在我周围的感觉",dim:"E"},{id:13,text:"我对诗词歌赋比较有感觉，它们常能打动我",dim:"O"},{id:14,text:"就算有必要，我也不会为了达到我的目标而去操纵别人",dim:"A"},{id:15,text:"我不是一个做事有条不紊的人",dim:"C"},
+    {id:16,text:"别人对待我的方式常让我感到愤怒",dim:"N"},{id:17,text:"当我阅读一首诗，或者欣赏一件艺术品时，我有时会感到兴奋或惊喜",dim:"E"},{id:18,text:"比起单独工作，我更喜欢与团队一起工作",dim:"O"},{id:19,text:"没有人觉得我是自私且以自我为中心的",dim:"A"},{id:20,text:"我好像总能把事情安排得井井有条",dim:"C"},
+    {id:21,text:"我经常感到寂寞或忧郁",dim:"N"},{id:22,text:"我愿意成为别人的领袖",dim:"E"},{id:23,text:"我很少注意自己在不同环境下的情绪或感受",dim:"O"},{id:24,text:"没有人觉得我是冷漠或爱算计的",dim:"A"},{id:25,text:"我会尽心尽力完成一切分配给我的工作",dim:"C"},
+    {id:26,text:"有时我感到自己一文不值",dim:"N"},{id:27,text:"我常常感到精力旺盛",dim:"E"},{id:28,text:"当我找到做事情的正确方法之后，我还会尝试寻找其他可能的方法",dim:"O"},{id:29,text:"我通常会尽力做到体贴和周到",dim:"A"},{id:30,text:"我常常能让自己保持可靠或可信",dim:"C"},
+    {id:31,text:"我经常感到忧郁或沮丧",dim:"N"},{id:32,text:"我的生活节奏很快",dim:"E"},{id:33,text:"我经常会尝试新鲜事物或主动了解新鲜事物",dim:"O"},{id:34,text:"大部分认识我的人都喜欢我",dim:"A"},{id:35,text:"如果我做出了承诺，通常我能贯彻到底",dim:"C"},
+    {id:36,text:"很多时候，当事情不对劲时，我会感到挫败或者想放弃",dim:"N"},{id:37,text:"我是一个十分活跃的人",dim:"E"},{id:38,text:"我喜欢思考理论或抽象的概念",dim:"O"},{id:39,text:"我宁愿与人合作，胜过与人竞争",dim:"A"},{id:40,text:"我有一个明确的方向，并能有条不紊地朝着它努力工作",dim:"C"},
+    {id:41,text:"有时候，我会羞愧地想要躲起来",dim:"N"},{id:42,text:"我喜欢身临其境，置身于事件中的感觉",dim:"E"},{id:43,text:"我对思考宇宙的规律和人类的情况很感兴趣",dim:"O"},{id:44,text:"就算我不喜欢某个人，我也不会让他知道",dim:"A"},{id:45,text:"我会努力完成我的目标",dim:"C"},
+    {id:46,text:"我经常感到自己不如别人",dim:"N"},{id:47,text:"我是一个乐观主义者",dim:"E"},{id:48,text:"我对具有思考性的事物充满好奇",dim:"O"},{id:49,text:"我很少与同事或家人起争执",dim:"A"},{id:50,text:"我凡事都追求卓越",dim:"C"},
+    {id:51,text:"我经常感到无助，并且希望有人能帮助我解决问题",dim:"N"},{id:52,text:"我是一个快乐、积极、乐观、开朗的人",dim:"E"},{id:53,text:"我相信让学生听富有争议性的演讲不会混淆或误导他们的思想",dim:"O"},{id:54,text:"我对自己的评价并不高",dim:"A"},{id:55,text:"我比较习惯按照自己的步调把事情办妥",dim:"C"},
+    {id:56,text:"当我处在极大的压力之下，我有时会感到自己濒临崩溃",dim:"N"},{id:57,text:"我很容易笑",dim:"E"},{id:58,text:"我并不认为做道德决定的时候，一定要考虑专家权威的意见",dim:"O"},{id:59,text:"在态度上，我常常比较顽固，不愿意妥协",dim:"A"},{id:60,text:"我不需要花很长时间就能安顿下来工作",dim:"C"}
+];
+
+const optValues = [
+    {v:1,t:"十分不赞同"},{v:2,t:"不太赞同"},{v:3,t:"不能确定"},{v:4,t:"比较赞同"},{v:5,t:"十分赞同"}
+];
+
+const dimInfo = {
+    N:{name:"神经质",th:[24,38],low:"稳定、平静、放松、少情绪化",high:"烦恼、紧张、易情绪化、焦虑",desc:"神经质显著的人容易产生抑郁、焦虑等消极情绪，情绪控制能力较差；神经质不显著的人情绪较稳定。"},
+    E:{name:"外倾性",th:[26,42],low:"谨慎、内省、冷静、喜欢独处",high:"善交际、活跃、健谈、乐观",desc:"外倾性显著的人喜欢与人接触，比较热情，愿意冒险；外倾性不显著的人比较安静，喜欢独处。"},
+    O:{name:"开放性",th:[32,47],low:"讲实际、兴趣少、思维固化",high:"兴趣广泛、具有创新思维、富于想象",desc:"开放性显著的人富有想象力和创造力，兴趣广泛；开放性不显著的人比较保守，喜欢传统和常规。"},
+    A:{name:"宜人性",th:[30,48],low:"苛刻、挑剔、多疑、易怒",high:"脾气好、乐于助人、大度、直率",desc:"宜人性显著的人为人友善、慷慨大方、乐于助人；宜人性不显著的人不愿意帮助别人，较多疑。"},
+    C:{name:"尽责性",th:[36,44],low:"无目标、懒散、粗心、意志薄弱",high:"有条理、勤奋、自律、守时、细心",desc:"尽责性显著的人比较可靠、聪明，做决策比较谨慎；尽责性不显著的人做事比较冲动，决策快。"}
+};
+
+// ───────── STATE ─────────
+let curStep = 1;
+let curQ = 0;
+let answers = new Array(60).fill(0);
+let testDone = false;
+let dimScores = null;
+let submissions = [];
+try { submissions = JSON.parse(localStorage.getItem('zx_submissions')) || []; } catch(e){}
+
+// ───────── STEP NAV ─────────
+function updateStepUI(step) {
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('sp' + i);
+        el.classList.remove('active','done');
+        if (i < step) el.classList.add('done');
+        else if (i === step) el.classList.add('active');
+    }
+    for (let i = 1; i <= 5; i++) {
+        const sec = document.getElementById('sec' + i);
+        sec.classList.toggle('active', i === step);
+    }
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    curStep = step;
+}
+
+function goNext(target) {
+    if (!validate(curStep)) return;
+    updateStepUI(target);
+}
+function goPrev(target) { updateStepUI(target); }
+
+function validate(step) {
+    if (step === 1) {
+        const req = ['jobPosition','interviewDate','availableDate','name','gender','birthYear','birthMonth','birthDay','maritalStatus','hometown','phone','address','baseSalary','totalSalary'];
+        for (const id of req) {
+            const el = document.getElementById(id);
+            if (!el.value.trim()) { alert('请填写所有必填项'); el.focus(); return false; }
+        }
+        const yr = parseInt(document.getElementById('birthYear').value);
+        const mo = parseInt(document.getElementById('birthMonth').value);
+        const dy = parseInt(document.getElementById('birthDay').value);
+        if (yr < 1950 || yr > new Date().getFullYear()) { alert('请输入有效的出生年份'); return false; }
+        if (mo < 1 || mo > 12) { alert('请输入有效的出生月份（1-12）'); return false; }
+        if (dy < 1 || dy > 31) { alert('请输入有效的出生日（1-31）'); return false; }
+    }
+    if (step === 2) {
+        const e1 = ['eduDate1','school1','major1','hasDegree1'];
+        for (const id of e1) {
+            if (!document.getElementById(id).value.trim()) { alert('请至少填写一条完整的教育经历'); return false; }
+        }
+        const w1 = ['workDate1','company1','companySize1','position1','subordinates1','baseSalary1','totalSalary1','leaveReason1'];
+        for (const id of w1) {
+            if (!document.getElementById(id).value.trim()) { alert('请填写第一段工作经历的所有必填项'); return false; }
+        }
+    }
+    if (step === 3) {
+        const skills = ['wordSkill','excelSkill','pptSkill','psSkill','aiSkill','prSkill'];
+        for (const id of skills) {
+            if (!document.getElementById(id).value) { alert('请选择所有软件技能的熟练度'); return false; }
+        }
+        if (!document.getElementById('strengths').value.trim()) { alert('请填写您的优势'); return false; }
+        if (!document.getElementById('weaknesses').value.trim()) { alert('请填写您的劣势'); return false; }
+    }
+    return true;
+}
+
+// ───────── PERSONALITY TEST ─────────
+function startTest() {
+    document.getElementById('testIntro').style.display = 'none';
+    document.getElementById('testScreen').style.display = 'block';
+    curQ = 0; answers.fill(0);
+    renderQ();
+}
+
+function renderQ() {
+    const q = questions[curQ];
+    document.getElementById('questionLabel').textContent = `问题 ${q.id}`;
+    document.getElementById('questionText').textContent = q.text;
+    document.getElementById('progressText').textContent = `${curQ + 1} / 60`;
+    document.getElementById('progressFill').style.width = ((curQ + 1) / 60 * 100) + '%';
+    document.getElementById('prevQBtn').disabled = curQ === 0;
+
+    const list = document.getElementById('optionsList');
+    list.innerHTML = '';
+    optValues.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn' + (answers[curQ] === opt.v ? ' selected' : '');
+        btn.innerHTML = `<div class="option-check"></div><span class="option-text">${opt.t}</span>`;
+        btn.onclick = () => selectAnswer(opt.v);
+        list.appendChild(btn);
+    });
+}
+
+function selectAnswer(val) {
+    answers[curQ] = val;
+    // highlight
+    document.querySelectorAll('.option-btn').forEach((btn, i) => {
+        btn.classList.toggle('selected', optValues[i].v === val);
+    });
+    setTimeout(() => {
+        if (curQ < 59) { curQ++; renderQ(); }
+        else finishTest();
+    }, 700);
+}
+
+function prevQ() { if (curQ > 0) { curQ--; renderQ(); } }
+function nextQ() {
+    if (answers[curQ] === 0) { alert('请先选择答案'); return; }
+    if (curQ < 59) { curQ++; renderQ(); }
+    else finishTest();
+}
+
+function finishTest() {
+    if (answers.some(a => a === 0)) { alert('请完成所有60道题目'); return; }
+    calcScores();
+    testDone = true;
+    saveData();
+    updateStepUI(5);
+}
+
+function calcScores() {
+    const map = {N:[],E:[],O:[],A:[],C:[]};
+    questions.forEach((q, i) => map[q.dim].push(i));
+    dimScores = {};
+    for (const d in map) {
+        dimScores[d] = map[d].reduce((s, i) => s + answers[i], 0);
+    }
+}
+
+function saveData() {
+    const d = {
+        timestamp: new Date().toLocaleString('zh-CN'),
+        jobPosition: v('jobPosition'), interviewDate: v('interviewDate'),
+        availableDate: v('availableDate'), name: v('name'),
+        birth: `${v('birthYear')}-${v('birthMonth')}-${v('birthDay')}`,
+        gender: v('gender'), maritalStatus: v('maritalStatus'),
+        baseSalary: v('baseSalary'), totalSalary: v('totalSalary'),
+        hometown: v('hometown'), phone: v('phone'), address: v('address'),
+        edu: {
+            date1:v('eduDate1'),school1:v('school1'),major1:v('major1'),degree1:v('hasDegree1'),
+            date2:v('eduDate2'),school2:v('school2'),major2:v('major2'),degree2:v('hasDegree2')
+        },
+        training: {date:v('trainingDate'),org:v('trainingOrg'),content:v('trainingContent')},
+        work: [
+            {date:v('workDate1'),co:v('company1'),size:v('companySize1'),pos:v('position1'),sub:v('subordinates1'),base:v('baseSalary1'),total:v('totalSalary1'),leave:v('leaveReason1')},
+            {date:v('workDate2'),co:v('company2'),size:v('companySize2'),pos:v('position2'),sub:v('subordinates2'),base:v('baseSalary2'),total:v('totalSalary2'),leave:v('leaveReason2')},
+            {date:v('workDate3'),co:v('company3'),size:v('companySize3'),pos:v('position3'),sub:v('subordinates3'),base:v('baseSalary3'),total:v('totalSalary3'),leave:v('leaveReason3')}
+        ],
+        skills: {word:v('wordSkill'),excel:v('excelSkill'),ppt:v('pptSkill'),ps:v('psSkill'),ai:v('aiSkill'),pr:v('prSkill')},
+        strengths: v('strengths'), weaknesses: v('weaknesses'),
+        scores: {...dimScores}
+    };
+    submissions.push(d);
+    try { localStorage.setItem('zx_submissions', JSON.stringify(submissions)); } catch(e){}
+}
+const v = id => document.getElementById(id).value;
+
+// ───────── REPORT ─────────
+async function downloadReport() {
+    if (!testDone) { alert('请先完成大五人格测试'); return; }
+    const sub = submissions[submissions.length - 1];
+    document.getElementById('loadingOverlay').classList.add('show');
+    await new Promise(r => setTimeout(r, 100));
+
+    const pdfEl = document.getElementById('pdfReport');
+    let dimRows = '';
+    for (const [key, info] of Object.entries(dimInfo)) {
+        const score = sub.scores[key];
+        const level = score <= info.th[0] ? '低' : score >= info.th[1] ? '高' : '中';
+        const levelDesc = score <= info.th[0] ? info.low : score >= info.th[1] ? info.high : '处于中等水平';
+        dimRows += `<tr><td><b>${info.name}</b></td><td>${score}/60</td><td>${level}</td><td>${levelDesc}</td></tr>`;
+    }
+
+    let workRows = sub.work.filter(w=>w.co).map(w=>`<tr><td>${w.date}</td><td>${w.co}</td><td>${w.size}</td><td>${w.pos}</td><td>${w.sub}</td><td>${w.base}</td><td>${w.total}</td><td>${w.leave}</td></tr>`).join('');
+
+    pdfEl.innerHTML = `
+        <div class="pdf-h">
+            <h1>招聘面试综合评估报告</h1>
+            <p>生成时间：${new Date().toLocaleString('zh-CN')} | 众翔面试管理系统</p>
+        </div>
+        <div class="pdf-s"><h2>一、基本信息</h2>
+        <table class="pdf-t"><tr><th>求职岗位</th><td>${sub.jobPosition}</td><th>面试时间</th><td>${sub.interviewDate}</td></tr>
+        <tr><th>姓名</th><td>${sub.name}</td><th>性别</th><td>${sub.gender}</td></tr>
+        <tr><th>出生年月</th><td>${sub.birth}</td><th>婚育状况</th><td>${sub.maritalStatus}</td></tr>
+        <tr><th>联系电话</th><td>${sub.phone}</td><th>户籍地</th><td>${sub.hometown}</td></tr>
+        <tr><th>现在住址</th><td colspan="3">${sub.address}</td></tr>
+        <tr><th>期望底薪</th><td>${sub.baseSalary}</td><th>期望综合薪资</th><td>${sub.totalSalary}</td></tr>
+        <tr><th>可到岗时间</th><td colspan="3">${sub.availableDate}</td></tr></table></div>
+        <div class="pdf-s"><h2>二、教育经历</h2>
+        <table class="pdf-t"><tr><th>起止年月</th><th>学校名称</th><th>专业</th><th>是否取得学位</th></tr>
+        ${sub.edu.school1?`<tr><td>${sub.edu.date1}</td><td>${sub.edu.school1}</td><td>${sub.edu.major1}</td><td>${sub.edu.degree1}</td></tr>`:''}
+        ${sub.edu.school2?`<tr><td>${sub.edu.date2}</td><td>${sub.edu.school2}</td><td>${sub.edu.major2}</td><td>${sub.edu.degree2}</td></tr>`:''}</table></div>
+        ${sub.training.org?`<div class="pdf-s"><h2>三、培训经历</h2><table class="pdf-t"><tr><th>起止年月</th><th>培训机构</th><th>培训内容</th></tr><tr><td>${sub.training.date}</td><td>${sub.training.org}</td><td>${sub.training.content}</td></tr></table></div>`:''}
+        <div class="pdf-s"><h2>四、工作经历</h2>
+        <table class="pdf-t"><tr><th>起止年月</th><th>单位名称</th><th>公司人数</th><th>职位</th><th>下属人数</th><th>无责底薪</th><th>综合薪资</th><th>离职原因</th></tr>${workRows}</table></div>
+        <div class="pdf-s"><h2>五、技能与自我评价</h2>
+        <table class="pdf-t"><tr><th>Word</th><th>Excel</th><th>PPT</th><th>PS</th><th>Ai/剪映</th><th>PR</th></tr>
+        <tr><td>${sub.skills.word}</td><td>${sub.skills.excel}</td><td>${sub.skills.ppt}</td><td>${sub.skills.ps}</td><td>${sub.skills.ai}</td><td>${sub.skills.pr}</td></tr></table>
+        <p><b>优势：</b>${sub.strengths}</p><p style="margin-top:5px"><b>劣势：</b>${sub.weaknesses}</p></div>
+        <div class="pdf-s"><h2>六、大五人格测试结果</h2>
+        <table class="pdf-t"><tr><th>维度</th><th>得分</th><th>水平</th><th>特征描述</th></tr>${dimRows}</table>
+        ${Object.entries(dimInfo).map(([k,info])=>{const s=sub.scores[k];const l=s<=info.th[0]?'低':s>=info.th[1]?'高':'中';return `<p style="margin-top:6px"><b>${info.name}（${s}分，${l}）：</b>${info.desc}</p>`;}).join('')}</div>
+        <div class="pdf-foot"><p>本报告由众翔面试管理系统生成，数据保密，仅供招聘参考使用</p></div>
+    `;
+
+    try {
+        const canvas = await html2canvas(pdfEl, {scale:2,useCORS:true,backgroundColor:'#fff'});
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF('p','mm','a4');
+        const w = 210, h = canvas.height * 210 / canvas.width;
+        let left = h, pos = 0;
+        pdf.addImage(imgData,'PNG',0,pos,w,h);
+        left -= 297;
+        while (left >= 0) { pos = left - h; pdf.addPage(); pdf.addImage(imgData,'PNG',0,pos,w,h); left -= 297; }
+        pdf.save(`${sub.name}_${sub.jobPosition}_评估报告.pdf`);
+    } catch(e) { alert('生成PDF时发生错误，请重试'); }
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+function restartAll() {
+    if (!confirm('确定重新开始？所有已填写的信息将被清空。')) return;
+    document.querySelectorAll('input,select,textarea').forEach(el => {
+        if (el.type !== 'button') el.value = '';
+        if (el.tagName==='SELECT') el.selectedIndex = 0;
+    });
+    answers.fill(0); curQ = 0; testDone = false; dimScores = null;
+    document.getElementById('testIntro').style.display = 'block';
+    document.getElementById('testScreen').style.display = 'none';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('interviewDate').value = today;
+    updateStepUI(1);
+}
+
+// ───────── ADMIN ─────────
+const ADMIN_PWD = 'zx2024';
+let adminLoggedIn = false;
+
+function openAdmin() {
+    document.getElementById('adminOverlay').classList.add('open');
+    if (adminLoggedIn) {
+        document.getElementById('adminLogin').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+    } else {
+        document.getElementById('adminLogin').style.display = 'block';
+        document.getElementById('adminContent').style.display = 'none';
+    }
+}
+function closeAdmin() { document.getElementById('adminOverlay').classList.remove('open'); }
+function closeAdminIfOutside(e) { if (e.target === document.getElementById('adminOverlay')) closeAdmin(); }
+
+function loginAdmin() {
+    const pwd = document.getElementById('adminPwd').value;
+    if (pwd === ADMIN_PWD) {
+        adminLoggedIn = true;
+        document.getElementById('adminLogin').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+    } else {
+        alert('密码错误，请重试');
+        document.getElementById('adminPwd').value = '';
+    }
+}
+function logoutAdmin() {
+    adminLoggedIn = false;
+    document.getElementById('adminPwd').value = '';
+    document.getElementById('adminLogin').style.display = 'block';
+    document.getElementById('adminContent').style.display = 'none';
+    document.getElementById('adminDataWrap').style.display = 'none';
+}
+
+function showAdminData() {
+    const wrap = document.getElementById('adminDataWrap');
+    const container = document.getElementById('adminTableContainer');
+    if (!submissions.length) { alert('暂无数据'); return; }
+    const cols = ['提交时间','姓名','求职岗位','面试时间','性别','电话','户籍地','底薪期望','综合薪资','神经质','外倾性','开放性','宜人性','尽责性'];
+    let html = '<table class="admin-table"><thead><tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    submissions.forEach(s => {
+        html += `<tr><td>${s.timestamp}</td><td>${s.name}</td><td>${s.jobPosition}</td><td>${s.interviewDate}</td><td>${s.gender}</td><td>${s.phone}</td><td>${s.hometown}</td><td>${s.baseSalary}</td><td>${s.totalSalary}</td><td>${s.scores?.N??'-'}</td><td>${s.scores?.E??'-'}</td><td>${s.scores?.O??'-'}</td><td>${s.scores?.A??'-'}</td><td>${s.scores?.C??'-'}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    wrap.style.display = 'block';
+}
+
+function downloadCSV() {
+    if (!submissions.length) { alert('暂无数据'); return; }
+    const header = ['提交时间','姓名','求职岗位','面试时间','性别','出生年月','婚育状况','底薪期望','综合薪资','户籍地','电话','住址','最近工作单位','职位','离职原因','Word','Excel','PPT','PS','Ai/剪映','PR','优势','劣势','神经质','外倾性','开放性','宜人性','尽责性'];
+    const rows = submissions.map(s => [
+        s.timestamp,s.name,s.jobPosition,s.interviewDate,s.gender,s.birth,s.maritalStatus,
+        s.baseSalary,s.totalSalary,s.hometown,s.phone,s.address,
+        s.work[0]?.co||'',s.work[0]?.pos||'',s.work[0]?.leave||'',
+        s.skills.word,s.skills.excel,s.skills.ppt,s.skills.ps,s.skills.ai,s.skills.pr,
+        s.strengths,s.weaknesses,s.scores?.N||'',s.scores?.E||'',s.scores?.O||'',s.scores?.A||'',s.scores?.C||''
+    ].map(c => `"${String(c).replace(/"/g,'""')}"`).join(','));
+    const csv = '\uFEFF' + [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `众翔面试数据_${new Date().toLocaleDateString('zh-CN')}.csv`;
+    a.click();
+}
+
+function exportAllData() {
+    if (!submissions.length) { alert('暂无数据'); return; }
+    const blob = new Blob([JSON.stringify(submissions, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `众翔面试数据_${Date.now()}.json`;
+    a.click();
+}
+
+function clearAllData() {
+    if (!confirm('确定清空所有面试数据？此操作不可撤销。')) return;
+    submissions = [];
+    localStorage.removeItem('zx_submissions');
+    alert('数据已清空');
+    document.getElementById('adminDataWrap').style.display = 'none';
+}
+
+async function downloadAllAsPDF() {
+    if (!submissions.length) { alert('暂无数据'); return; }
+    document.getElementById('loadingOverlay').classList.add('show');
+    await new Promise(r=>setTimeout(r,100));
+    const pdfEl = document.getElementById('pdfReport');
+    let html = `<div class="pdf-h"><h1>众翔面试数据汇总报告</h1><p>生成时间：${new Date().toLocaleString('zh-CN')} | 共 ${submissions.length} 条记录</p></div>`;
+    submissions.forEach((s, i) => {
+        html += `<div class="pdf-s" style="border-top:2px solid #5548d9;padding-top:10px;margin-top:15px">
+            <h2>候选人 ${i+1}：${s.name}</h2>
+            <table class="pdf-t"><tr><th>求职岗位</th><td>${s.jobPosition}</td><th>面试时间</th><td>${s.interviewDate}</td></tr>
+            <tr><th>性别</th><td>${s.gender}</td><th>联系电话</th><td>${s.phone}</td></tr>
+            <tr><th>期望底薪</th><td>${s.baseSalary}</td><th>期望综合薪资</th><td>${s.totalSalary}</td></tr></table>
+            <table class="pdf-t" style="margin-top:6px"><tr><th>神经质</th><td>${s.scores?.N||'-'}/60</td><th>外倾性</th><td>${s.scores?.E||'-'}/60</td><th>开放性</th><td>${s.scores?.O||'-'}/60</td><th>宜人性</th><td>${s.scores?.A||'-'}/60</td><th>尽责性</th><td>${s.scores?.C||'-'}/60</td></tr></table>
+        </div>`;
+    });
+    html += `<div class="pdf-foot"><p>本报告由众翔面试管理系统生成，数据保密</p></div>`;
+    pdfEl.innerHTML = html;
+    try {
+        const canvas = await html2canvas(pdfEl,{scale:2,useCORS:true,backgroundColor:'#fff'});
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF('p','mm','a4');
+        const w=210, h=canvas.height*210/canvas.width;
+        let left=h, pos=0;
+        pdf.addImage(imgData,'PNG',0,pos,w,h); left-=297;
+        while(left>=0){pos=left-h;pdf.addPage();pdf.addImage(imgData,'PNG',0,pos,w,h);left-=297;}
+        pdf.save(`众翔面试汇总报告_${new Date().toLocaleDateString('zh-CN')}.pdf`);
+    } catch(e){alert('生成PDF失败，请重试');}
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// ───────── INIT ─────────
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('interviewDate').value = today;
+
+    ['birthYear','birthMonth','birthDay'].forEach(id => {
+        document.getElementById(id).addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g,'');
+        });
+    });
+});
+</script>
+</body>
+</html>
